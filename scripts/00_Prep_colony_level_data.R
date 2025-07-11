@@ -92,10 +92,6 @@ ALL_ICRA_SIZE_PM <- rbind(
   )
 ALL_ICRA_SIZE_PM$YEAR <- ordered(ALL_ICRA_SIZE_PM$YEAR, levels = c("2015", "2018", "2023", "2025"))
 
-summary_by_year_site <- ALL_ICRA_SIZE_PM %>%
-  group_by(YEAR) %>%
-  summarise(num_sites = n_distinct(SITE))
-
 #save this raw data
 save(ALL_ICRA_SIZE_PM, file ="data/ICRA_PM_NS.csv")
 save(ALL_ICRA_SIZE_PM, file ="data/All_ICRA_SIZE_PM.RData")
@@ -103,7 +99,7 @@ save(ALL_ICRA_SIZE_PM, file ="data/All_ICRA_SIZE_PM.RData")
 #manually removed all ICRA data from north side of island in arcGIS. both are plotted in map script for transparency and visualization.
 SOUTH_COLONY_SIZE_PM<-read.csv("data/south_only_ICRA_Colony_level_data.csv")
 
-save(south_ICRA_survey_data, file ="data/ICRA_PM_SIZE_USE.Rdata") #for 2025 only analyses
+save(south_ICRA_survey_data, file ="data/ICRA_PM_SIZE_USE.Rdata") #not for temporal comparisons
 
 #identify corals outside the size range for temporal analyses (>116cm, to account for differences in survey methods in 2025 vs. ncrmp)
 removed_summary <- SOUTH_COLONY_SIZE_PM %>% 
