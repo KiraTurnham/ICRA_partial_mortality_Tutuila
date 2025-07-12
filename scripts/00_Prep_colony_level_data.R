@@ -46,7 +46,8 @@ ncrmp$TAIL_BINS=cut(ncrmp$COLONYLENGTH,c(-Inf,q[1,1],q[2,1],Inf),labels=c('Q20',
 
 #note: tail bins were the same log tansforming or not. 
 
-#write.csv(ncrmp, "NCRMP_COlony_level_TUT_filtered.csv")
+#save for calculating density
+write.csv(ncrmp, "data/NCRMP_COlony_level_TUT_filtered.csv")
 
 #make sure columns are read as correct format
 ncrmp$YEAR <- as.factor(ncrmp$YEAR)
@@ -98,8 +99,7 @@ save(ALL_ICRA_SIZE_PM, file ="data/All_ICRA_SIZE_PM.RData")
 
 #manually removed all ICRA data from north side of island in arcGIS. both are plotted in map script for transparency and visualization.
 SOUTH_COLONY_SIZE_PM<-read.csv("data/south_only_ICRA_Colony_level_data.csv")
-
-save(south_ICRA_survey_data, file ="data/ICRA_PM_SIZE_USE.Rdata") #not for temporal comparisons
+save(SOUTH_COLONY_SIZE_PM, file ="data/South_ICRA_PM_SIZE_unfiltered.Rdata") #not for temporal comparisons
 
 #identify corals outside the size range for temporal analyses (>116cm, to account for differences in survey methods in 2025 vs. ncrmp)
 removed_summary <- SOUTH_COLONY_SIZE_PM %>% 
@@ -114,12 +114,12 @@ removed_summary <- SOUTH_COLONY_SIZE_PM %>%
 
 #view how many were removed and from what site
 print(removed_summary)
-#save(removed_summary, file = "data/colonies_removed_due_to_size.RData")
+save(removed_summary, file = "data/colonies_removed_due_to_size.RData")
 
 #remove those corals from dataset
 ICRA_SIZE_PM_SOUTH_filtered <- SOUTH_COLONY_SIZE_PM %>%
   filter(COLONYLENGTH >= 4.9 & COLONYLENGTH <= 116.1)
 
-#save as csv and rdata
+#save as csv and rdata. Use in temporal analyses 
 save(ICRA_SIZE_PM_SOUTH_filtered, file ="data/ICRA_SIZE_PM_SOUTH_sizefiltered_colony_level.RData") #remember this has subset of 2025 data that were sized
 write.csv(ICRA_SIZE_PM_SOUTH_filtered, "data/south_ICRA_Colony_level_data_sizefiltered.csv", row.names = FALSE)

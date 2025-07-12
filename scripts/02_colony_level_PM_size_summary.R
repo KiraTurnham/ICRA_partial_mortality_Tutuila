@@ -16,14 +16,10 @@ library(tidyverse)
 library(ggpubr)
 library(rstatix)
 
-load(file ="data/ICRA_PM_SIZE_USE.Rdata")
-
-#remove colonies larger than 116 cm. 
-s<-south_ICRA_survey_data %>%
-  filter(COLONYLENGTH <= 116.1)
-
+load(file ="data/ICRA_SIZE_PM_SOUTH_sizefiltered_colony_level.RData")
+s<-ICRA_SIZE_PM_SOUTH_filtered
 #data summary
-mean_size_per_year_south <- s %>%
+mean_size_per_year <- s %>%
   group_by(YEAR) %>%
   summarise(mean_size = mean(COLONYLENGTH, na.rm = TRUE),
             sd_size = sd(COLONYLENGTH, na.rm = TRUE),
@@ -35,7 +31,7 @@ mean_size_per_year_south <- s %>%
 
 
 # mean PM per year
-mean_PM_per_year_south <- s %>%
+mean_PM_per_year <- s %>%
   group_by(YEAR) %>%
   summarise(mean_PM = mean(PER_DEAD, na.rm = TRUE),
             sd_PM = sd(PER_DEAD, na.rm = TRUE),
@@ -46,7 +42,7 @@ mean_PM_per_year_south <- s %>%
             .groups = "drop")
 
 # mean PM per year by size class
-mean_PM_per_year_all <- s %>%
+mean_PM_per_year_by_size <- s %>%
   group_by(YEAR, TAIL_BINS) %>%
   summarise(mean_PM = mean(PER_DEAD, na.rm = TRUE),
             sd_PM = sd(PER_DEAD, na.rm = TRUE),
@@ -74,7 +70,7 @@ shapiro.test(s$PER_DEAD)
 kw_results <- s %>%
   kruskal_test(PER_DEAD ~ YEAR)
 
-#KS test: PM by year and size class
+#KS test: PM by size class
 kw_results_bin <- s %>%
   kruskal_test(PER_DEAD ~ TAIL_BINS)
 
@@ -145,6 +141,7 @@ s %>%
   filter (YEAR == '2025') %>%
   dunn_test(PER_DEAD ~ TAIL_BINS, p.adjust.method = "bonferroni")
 
+######################################################################
 # set colors
 vir_colors <- viridis(n = 4, option = "C")
 print(vir_colors)
@@ -161,10 +158,11 @@ facet_labels <- c(
 ###################################
 #####ridgeplot of PM by year#######
 ###################################
+
 ggplot(s, aes(x = PER_DEAD, y = as.factor(YEAR), fill = as.factor(YEAR))) +
   geom_density_ridges(alpha = 1) +  # Ridge plot
-  geom_point(data = mean_PM_per_year_south, aes(x = (mean_PM), y = as.factor(YEAR)), #can change to log(mean_PM)
-             color = "black", size = 3, shape = 16) +  # Means are points
+  geom_point(data = mean_PM_per_year, aes(x = (mean_PM), y = as.factor(YEAR)), #can change to log(mean_PM)
+             fill="white", stroke = 1.5, color = "black", size = 3.5, shape = 21) +  #means are points
   #stat_density_ridges(quantile_lines = TRUE, quantiles = 3, alpha = 0.5, color= "black", linewidth = 0.5) +  # Quantiles
   geom_text(data = max_size, 
             aes(x = max_size + (max_size * 0.05),  
@@ -182,39 +180,39 @@ ggplot(s, aes(x = PER_DEAD, y = as.factor(YEAR), fill = as.factor(YEAR))) +
         panel.grid.minor = element_blank(),
         axis.text.x = element_text(size = 12),
         axis.text.y = element_text(size = 12),
-        axis.title = element_text(size = 14, face = "bold"),
+        axis.title = element_text(size = 14), #face = "bold"),
         axis.text = element_text(size = 12),
-        plot.title = element_text(size = 16, face = "bold"))+
+        plot.title = element_text(size = 16))+ #face = "bold"))+
   scale_x_continuous(breaks = c(0, 50, 100))
 
-ggplot2::ggsave ("paper/Partial_mortality_ridge2.pdf", width = 5, height = 5, units = 'in')
-
+ggplot2::ggsave ("plots/Partial_mortality_ridge.pdf", width = 5, height = 5, units = 'in')
+ggplot2::ggsave ("plots/Partial_mortality_ridge.png", width = 5, height = 5, units = 'in')
 ######################################
 #barplot of PM by size class and year#
 ######################################
 
 #correct order
-mean_PM_per_year_all$TAIL_BINS <- factor(mean_PM_per_year_all$TAIL_BINS, 
+mean_PM_per_year_by_size$TAIL_BINS <- factor(mean_PM_per_year_by_size$TAIL_BINS, 
                                        levels = c("Q20", "QMED", "Q80"))
 
-ggplot(mean_PM_per_year_all %>% filter(!is.na(TAIL_BINS)), 
+ggplot(mean_PM_per_year_by_size %>% filter(!is.na(TAIL_BINS)), 
        aes(x = as.factor(YEAR), y = mean_PM, fill = as.factor(YEAR))) +
   geom_col(alpha = 1) +
-  geom_errorbar(
-    aes(
-      ymin = mean_PM - sd_PM,
-      ymax = mean_PM + sd_PM
-    ),
-                 height = 0.2, color = "black") +
-  # geom_errorbar(aes(
-  #   ymin = pmax(0, lower_CI),  
-  #   ymax = upper_CI
-  # ), width = 0.2) +theme_minimal() +
+  # geom_errorbar(
+  #   aes(
+    #   ymin = mean_PM - sd_PM,
+    #   ymax = mean_PM + sd_PM
+    # ),
+    #              height = 0.2, color = "black") +
+  geom_errorbar(aes(
+    ymin = pmax(0, lower_CI),
+    ymax = upper_CI
+  ), width = 0.3, size = 0.55) +theme_minimal() +
   theme(
     panel.border = element_rect(color = "grey", fill = NA, size = 1)
   ) +
   labs(
-    x = "Survey Year",
+    x = "Year",
     y = "Mean partial mortality (%)",
     fill="Year"
   ) +
@@ -225,19 +223,20 @@ ggplot(mean_PM_per_year_all %>% filter(!is.na(TAIL_BINS)),
     legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    strip.text = element_text(size = 10),
-    axis.text.x = element_text(size = 10, angle = 45, hjust = 0.7),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(size = 12, angle = 45, hjust = 0.7),
     axis.text.y = element_text(size = 12),
-    axis.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 14),
     panel.border = element_rect(color = "grey", fill = NA, size = 1)
   )
-ggplot2::ggsave ("paper/Partial_mortaltiy_barplot_by_size_class_sd.png", width = 5, height = 5, units = 'in')
+ggplot2::ggsave ("plots/Partial_mortaltiy_barplot_by_size_class_sd.png", width = 5, height = 5, units = 'in')
+ggplot2::ggsave ("plots/Partial_mortaltiy_barplot_by_size_class_sd.pdf", width = 5, height = 5, units = 'in')
 
 ########################
 #barplot of PM by  year#
 ########################
 
-ggplot(mean_PM_per_year_south,
+ggplot(mean_PM_per_year,
        aes(x = as.factor(YEAR), y = mean_PM, fill = as.factor(YEAR))) +
   geom_col(alpha = 1) +
   # geom_errorbar(
@@ -249,12 +248,12 @@ ggplot(mean_PM_per_year_south,
   geom_errorbar(aes(
     ymin = pmax(0, lower_CI),
     ymax = upper_CI
-  ), width = 0.2) +theme_minimal() +
+  ), width = 0.2,  size = 0.7) +theme_minimal() +
   theme(
     panel.border = element_rect(color = "grey", fill = NA, size = 1)
   ) +
   labs(
-    x = "Survey Year",
+    x = "Year",
     y = "Mean partial mortality (%)",
     fill="Year"
   ) +
@@ -264,12 +263,12 @@ ggplot(mean_PM_per_year_south,
     legend.position = "none",
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    strip.text = element_text(size = 10),
-    axis.text.x = element_text(size = 10, angle = 45, hjust = 0.7),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(size = 12,  hjust = 0.7),
     axis.text.y = element_text(size = 12),
-    axis.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 14),
     panel.border = element_rect(color = "grey", fill = NA, size = 1)
   )
-ggplot2::ggsave ("paper/Partial_mortality_barplot_year_CI.png", width = 5, height = 5, units = 'in')
+ggplot2::ggsave ("plots/Partial_mortality_barplot_year_CI.png", width = 5, height = 5, units = 'in')
 
 

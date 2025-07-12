@@ -15,7 +15,7 @@ library(lme4)
 library(broom.mixed)
 library(tidyverse)
 
-load("data/SOUTH_COLONY_DENSITY_filtered.RData") #does not have north sites or Feb 2025 sites. Removed the largest corals in 2025.
+load("data/SOUTH_COLONY_DENSITY_filtered.RData") #does not have north sites. Removed the largest corals in 2025.
 
 # set colors
 vir_colors <- viridis(n = 4, option = "C")
@@ -43,12 +43,9 @@ summary_by_year_and_total <- SOUTH_COLONY_DENSITY_filtered %>%
 #3  2023           29        0    18    0.620      1.71   #11 sites 
 #4  2025           15        0     3    0.618      0.896  #12 sites  were >0
 
-
-
-#Exploring density data by survey method
 #test if size distribution is normal
 shapiro.test(SOUTH_COLONY_DENSITY_filtered$adjusted_density)
-#W = 0.40935, p-value < 2.2e-16
+#not normal
 
 kw_results_filtered <- SOUTH_COLONY_DENSITY_filtered %>%
   kruskal_test(adjusted_density ~ YEAR)
@@ -61,22 +58,56 @@ dunn_results_filtered <- SOUTH_COLONY_DENSITY_filtered %>%
 
 
 
+mean_sd_den_per_year_site <- SOUTH_COLONY_DENSITY_filtered %>%
+  group_by(YEAR) %>%
+  summarise(
+    mean_den = mean(adjusted_density, na.rm = TRUE),
+    sd_density = sd(adjusted_density, na.rm = TRUE),
+    n = sum(!is.na(DENSITY)),
+    se = sd_density / sqrt(n),
+    lower_CI = mean_den - qt(0.975, df = n - 1) * se,
+    upper_CI = mean_den + qt(0.975, df = n - 1) * se,
+    .groups = "drop"
+  )
 
-svglite("plots/my_plot.svg", width = 3, height = 4)
-ggplot(SOUTH_COLONY_DENSITY_filtered, aes(x = as.factor(YEAR), y = adjusted_density, fill = as.factor(YEAR))) +
-  geom_boxplot() +
-  #geom_jitter(width = 0.2, alpha = 0.4, size = 1) +
-  scale_y_log10() +
-  ylab("Adjusted Density (log₁₀ scale)") +
+
+# make a bar plot
+
+
+ggplot(mean_sd_den_per_year_site, aes(x = as.factor(YEAR), y = mean_den, fill=as.factor(YEAR))) +
+  geom_bar(stat = "identity", width = 0.8) +
+  geom_errorbar(aes(
+    ymin = pmax(lower_CI, 0),
+    ymax = upper_CI
+  ), width = 0.25, size = 0.6)+
+  #geom_errorbar(aes(
+  # ymin = pmax(mean_den - sd_density, 0),   # Prevent error bars from going below zero
+  # ymax = mean_den + sd_density), width = 0.25) +
+  labs(x = "Year", y = "Mean Density ± CI") +
   theme_minimal()+
-  theme(panel.grid = element_blank())+
+  theme(
+    panel.grid = element_blank(), 
+    #panel.border = element_rect(color = "black", size = 1),  
+    axis.text.x = element_text(size = 12),  
+    axis.text.y = element_text(size = 12),  
+    axis.title = element_text(size = 14),  
+    text = element_text(size = 14),  
+    plot.title = element_text(hjust = 0.5),  
+    legend.position = "none",  
+    legend.key.size = unit(0.6, "cm"),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 16)
+  ) +
+  scale_x_discrete(expand = expansion(mult = c(0.1, 0.1)))+
   scale_fill_manual(values = custom_colors)
-dev.off()
+#dev.off()
+ggsave("plots/density_barplot_CI.png", width = 3, height = 2.5, dpi = 300)
+ggsave("plots/density_barplot_CI.pdf", width = 3, height = 2.5, dpi = 300)
 
 
-#########################################
-#visualize log-transformed distributions#
-#########################################
+#################################
+#w log-transformed distributions#
+#################################
 
 # **Exploring transformed density data by survey method**
 # Log-transform ICRA densities (log(x + 1))
@@ -117,132 +148,9 @@ qq3 <- ggplot(SOUTH_COLONY_DENSITY_filtered, aes(sample = Sqrt_ICRA_density)) +
 (p1 | p2 | p3) / (qq1 | qq2 | qq3)
 ggsave("plots/south only density data transformation distributions.png")
 
-# ridge plot of count
-ggplot(SOUTH_COLONY_DENSITY_filtered, aes(x = adjusted_density, y = as.factor(YEAR), fill = as.factor(YEAR))) +
-  geom_density_ridges(alpha = 0.9) +
-  labs(x = "Count (Sqrt transformed)", y = "Year", title = "Density Distribution of Counts by Year") +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  scale_fill_manual(values = custom_colors)
-
-#  data to long format for bar plot and log transform do deal with zeros
-mean_sd_den_per_year_site_sqrt <- SOUTH_COLONY_DENSITY_filtered %>%
-  group_by(YEAR) %>%
-  summarise(
-    mean_den = mean(Sqrt_ICRA_density, na.rm = TRUE),
-    sd_density = sd(Sqrt_ICRA_density, na.rm = TRUE),
-    n = sum(!is.na(DENSITY)),
-    se = sd_density / sqrt(n),
-    lower_CI = mean_den - qt(0.975, df = n - 1) * se,
-    upper_CI = mean_den + qt(0.975, df = n - 1) * se,
-    .groups = "drop"
-  )
-
-mean_sd_den_per_year_site_feb <- south_den1 %>%
-  group_by(YEAR) %>%
-  summarise(
-    mean_den = mean(DENSITY, na.rm = TRUE),
-    sd_density = sd(DENSITY, na.rm = TRUE),
-    n = sum(!is.na(DENSITY)),
-    se = sd_density / sqrt(n),
-    lower_CI = mean_den - qt(0.975, df = n - 1) * se,
-    upper_CI = mean_den + qt(0.975, df = n - 1) * se,
-    .groups = "drop"
-  )
-
-mean_sd_den_per_year_site_feb <- south_den1 %>%
-  group_by(YEAR) %>%
-  summarise(
-    mean_den = mean(DENSITY, na.rm = TRUE),
-    sd_density = sd(DENSITY, na.rm = TRUE),
-    n = sum(!is.na(DENSITY)),
-    se = sd_density / sqrt(n),
-    lower_CI = mean_den - qt(0.975, df = n - 1) * se,
-    upper_CI = mean_den + qt(0.975, df = n - 1) * se,
-    .groups = "drop"
-  )
-
-mean_sd_den_per_year_site_no <- SOUTH_COLONY_DENSITY_filtered %>%
-  group_by(YEAR) %>%
-  summarise(
-    mean_den = mean(adjusted_density, na.rm = TRUE),
-    sd_density = sd(adjusted_density, na.rm = TRUE),
-    n = sum(!is.na(DENSITY)),
-    se = sd_density / sqrt(n),
-    lower_CI = mean_den - qt(0.975, df = n - 1) * se,
-    upper_CI = mean_den + qt(0.975, df = n - 1) * se,
-    .groups = "drop"
-  )
-
-mean_sd_den_per_year_site_w0 <- SOUTH_COLONY_DENSITY_filtered %>%
-  group_by(YEAR) %>%
-  summarise(
-    mean_den = mean(adjusted_density),
-    sd_density = sd(adjusted_density),
-    n = sum(!is.na(DENSITY)),
-    se = sd_density / sqrt(n),
-    lower_CI = mean_den - qt(0.975, df = n - 1) * se,
-    upper_CI = mean_den + qt(0.975, df = n - 1) * se,
-    .groups = "drop"
-  )
-
-mean_sd_den_per_year_site_all <- ALL_COLONY_DENSITY %>%
-  group_by(YEAR) %>%
-  summarise(
-    mean_den = mean(DENSITY, na.rm = TRUE),
-    sd_density = sd(DENSITY, na.rm = TRUE),
-    n = sum(!is.na(DENSITY)),
-    se = sd_density / sqrt(n),
-    lower_CI = mean_den - qt(0.975, df = n - 1) * se,
-    upper_CI = mean_den + qt(0.975, df = n - 1) * se,
-    .groups = "drop"
-  )
-
-# make a bar plot
 
 
-ggplot(mean_sd_den_per_year_site_w0, aes(x = as.factor(YEAR), y = mean_den, fill=as.factor(YEAR))) +
-  geom_bar(stat = "identity", width = 0.8) +
-  geom_errorbar(aes(
-    ymin = pmax(lower_CI, 0),
-    ymax = upper_CI
-  ), width = 0.25)+
-  #geom_errorbar(aes(
-  # ymin = pmax(mean_den - sd_density, 0),   # Prevent error bars from going below zero
-  # ymax = mean_den + sd_density), width = 0.25) +
-  labs(x = "Year", y = "Mean Density ± CI") +
-  theme_minimal()+
-  theme(
-    panel.grid = element_blank(), 
-    #panel.border = element_rect(color = "black", size = 1),  
-    axis.text.x = element_text(size = 12),  
-    axis.text.y = element_text(size = 12),  
-    axis.title = element_text(size = 14, face="bold"),  
-    text = element_text(size = 14),  
-    plot.title = element_text(hjust = 0.5),  
-    legend.position = "none",  
-    legend.key.size = unit(0.6, "cm"),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16)
-  ) +
-  scale_x_discrete(expand = expansion(mult = c(0.1, 0.1)))+
-  scale_fill_manual(values = custom_colors)
-#dev.off()
-ggsave("paper/density_barplot_rawCI.png", width = 3, height = 2.5, dpi = 300)
-
-#with feb data
-ggplot(mean_sd_den_per_year_site_feb, aes(x = as.factor(YEAR), y = mean_den, fill=as.factor(YEAR))) +
-  geom_bar(stat = "identity", width = 0.5) +
-  geom_errorbar(aes(
-    ymin = pmax(lower_CI, 0),
-    ymax = upper_CI
-  ), width = 0.25)+
-  labs(x = "Year", y = "Mean Density ± CI") +
-  theme_minimal()+
-  scale_fill_manual(values = custom_colors)
-ggsave("plots/den_boxplot_south_wfeb.png")
-
-#with transformed south filtered data
+#plot transformed south filtered data
 ggplot(mean_sd_den_per_year_site_sqrt, aes(x = as.factor(YEAR), y = mean_den, fill=as.factor(YEAR))) +
   geom_bar(stat = "identity", width = 0.8) +
   geom_errorbar(aes(
@@ -268,16 +176,5 @@ ggplot(mean_sd_den_per_year_site_sqrt, aes(x = as.factor(YEAR), y = mean_den, fi
   ) +
   scale_x_discrete(expand = expansion(mult = c(0.01, 0.01)))+
   scale_fill_manual(values = custom_colors)
-ggsave("plots/den_boxplot_south_nofeb_sqrt.png", width = 4, height = 6, dpi = 300)
+#ggsave("plots/den_boxplot_south_nofeb_sqrt.png", width = 4, height = 6, dpi = 300)
 
-#with all data
-ggplot(mean_sd_den_per_year_site_all, aes(x = as.factor(YEAR), y = mean_den, fill=as.factor(YEAR))) +
-  geom_bar(stat = "identity", width = 0.5) +
-  geom_errorbar(aes(
-    ymin = pmax(lower_CI, 0),
-    ymax = upper_CI
-  ), width = 0.25)+
-  labs(x = "Year", y = "Mean Density ± CI", title = "All average density") +
-  theme_minimal()+
-  scale_fill_manual(values = custom_colors)
-ggsave("plots/den_boxplot_all.png")

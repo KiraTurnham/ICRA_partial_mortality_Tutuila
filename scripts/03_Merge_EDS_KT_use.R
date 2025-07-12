@@ -15,7 +15,7 @@ rename  = dplyr::rename
 #load("data/eds_output.Rdata")
 load("eds_output_Sep12025.Rdata")
 load("eds_output_Sep12025_UPDATEDJPL.Rdata")
-load(file ="data/ICRA_PM_SIZE_USE.Rdata")
+load(file ="data/South_ICRA_PM_SIZE_unfiltered.Rdata")
 merged_PM_site_all_YR01.csv
 
 #subset 2025 (can later add this to clean-colony level script)
