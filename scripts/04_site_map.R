@@ -90,6 +90,7 @@ ggplot() +
     legend.title = element_text(size = 10)
   )
 #ggplot2::ggsave ("plots/all_sites_by_year.png", width = 5, height = 2.5, units = 'in',  bg = "transparent")
+
 ##########################
 ##plot where x's are 0/NA#
 ##########################
@@ -164,23 +165,9 @@ ggplot2::ggsave ("plots/all_sites_by_year_X.pdf", width = 5, height = 2.5, units
 
 #assign coordinates for density data. Want to keep PM=0 but not NA
 colnames(SOUTH_COLONY_DENSITY_filtered)
-sites_density_south <- SOUTH_COLONY_DENSITY_filtered %>%
-  mutate(LATITUDE = LATITUDE.x,
-         LONGITUDE = LONGITUDE.x)%>%
-  #filter(!is.na(mean_PM)) %>%
+sites_sf_density_south <- SOUTH_COLONY_DENSITY_filtered %>%
   distinct(LATITUDE, LONGITUDE, YEAR, .keep_all = TRUE) %>%  # keep all columns
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326)  # WGS84 
-
-#assign coordinates for density data. Want to remove NA 
-sites_sf_density_south <- sites_density_south %>%
-  filter(!is.na(DENSITY)) %>%
-  distinct(LATITUDE.x, LONGITUDE.x, YEAR, .keep_all = TRUE) %>%  # keep all columns
-  st_as_sf(coords = c("LONGITUDE.x", "LATITUDE.x"), crs = 4326)  # WGS84 
-
-sites_sf_density_south$log_mean_den <- log10(sites_sf_density_south$DENSITY + 0.01)
-
-
-
 
 #way to plot so that 2025 data is not on top
 # Make sure YEAR is a factor with the correct level order
@@ -228,8 +215,7 @@ ggplot() +
     legend.key.size = unit(0.4, "cm"),
     legend.box = "horizontal",
     legend.text = element_text(size = 11),
-    legend.title = element_text(size = 11)
-  )
+    legend.title = element_text(size = 11))
 
 ggplot2::ggsave ("paper/sites_map.pdf", width = 5, height = 3, units = 'in',  bg = "transparent")
 ggplot2::ggsave ("paper/sites_map.png", width = 5, height = 3, units = 'in',  bg = "transparent")

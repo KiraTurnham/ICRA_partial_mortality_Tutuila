@@ -151,7 +151,7 @@ ggsave("plots/south only density data transformation distributions.png")
 
 
 #plot transformed south filtered data
-ggplot(mean_sd_den_per_year_site_sqrt, aes(x = as.factor(YEAR), y = mean_den, fill=as.factor(YEAR))) +
+ggplot(mean_sd_den_per_year_site, aes(x = as.factor(YEAR), y = sqrt(mean_den), fill=as.factor(YEAR))) +
   geom_bar(stat = "identity", width = 0.8) +
   geom_errorbar(aes(
     ymin = pmax(lower_CI, 0),
