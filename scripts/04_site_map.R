@@ -217,6 +217,6 @@ ggplot() +
     legend.text = element_text(size = 11),
     legend.title = element_text(size = 11))
 
-ggplot2::ggsave ("paper/sites_map.pdf", width = 5, height = 3, units = 'in',  bg = "transparent")
-ggplot2::ggsave ("paper/sites_map.png", width = 5, height = 3, units = 'in',  bg = "transparent")
+ggplot2::ggsave ("plots/sites_map.pdf", width = 5, height = 3, units = 'in',  bg = "transparent")
+ggplot2::ggsave ("plots/sites_map.png", width = 5, height = 3, units = 'in',  bg = "transparent")
 
