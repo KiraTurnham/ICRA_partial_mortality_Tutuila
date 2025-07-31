@@ -59,6 +59,54 @@ max_size <- s %>%
     max_size = max(COLONYLENGTH, na.rm = TRUE),
     N = n())
 
+# mean PM per year by size class
+mean_PM_per_year_by_size <- s %>%
+  group_by(YEAR, TAIL_BINS) %>%
+  summarise(mean_PM = mean(PER_DEAD, na.rm = TRUE),
+            sd_PM = sd(PER_DEAD, na.rm = TRUE),
+            n = sum(!is.na(PER_DEAD)),
+            se = sd_PM / sqrt(n),
+            lower_CI = mean_PM - qt(0.975, df = n - 1) * se,
+            upper_CI = mean_PM + qt(0.975, df = n - 1) * se,
+            .groups = "drop")
+
+# mean PM per bleaching period
+mean_PM_per_period <- s %>%
+  group_by(Bleaching_Period) %>%
+  summarise(mean_PM = mean(PER_DEAD, na.rm = TRUE),
+            sd_PM = sd(PER_DEAD, na.rm = TRUE),
+            n = sum(!is.na(PER_DEAD)),
+            se = sd_PM / sqrt(n),
+            lower_CI = mean_PM - qt(0.975, df = n - 1) * se,
+            upper_CI = mean_PM + qt(0.975, df = n - 1) * se,
+            .groups = "drop")
+
+#calculate percent change between periods for a size class
+calculate_percent_change_period <- function(s, size_label) {
+  summary <- s %>%
+    group_by(Bleaching_Period) %>%
+    summarise(mean_PM = mean(PER_DEAD, na.rm = TRUE)) %>%
+    pivot_wider(names_from = Bleaching_Period, values_from = mean_PM)
+  
+  before <- summary$`Pre-Bleaching`
+  after  <- summary$`Post-Bleaching`
+  
+  percent_change <- ((after - before) / before) * 100
+  cat(sprintf("Partial mortality percent change for %s colonies: %.2f%%\n", size_label, percent_change))
+  return(percent_change)
+}
+
+# Subset by size class
+medium <- s %>% filter(TAIL_BINS == "QMED")
+large  <- s %>% filter(TAIL_BINS == "Q80")
+small  <- s %>% filter(TAIL_BINS == "Q20")
+
+# Calculate percent changes
+change_medium <- calculate_percent_change_period(medium, "Medium")
+change_large  <- calculate_percent_change_period(large, "Large")
+change_small  <- calculate_percent_change_period(small, "Small")
+
+
 #######
 #stats#
 #######
@@ -140,6 +188,21 @@ s %>%
 s %>%
   filter (YEAR == '2025') %>%
   dunn_test(PER_DEAD ~ TAIL_BINS, p.adjust.method = "bonferroni")
+
+
+# Wilcoxon test for Pre- vs Post-bleaching within each size class
+
+s %>%
+  filter(TAIL_BINS == 'Q20') %>%
+  wilcox_test(PER_DEAD ~ Bleaching_Period)
+
+s %>%
+  filter(TAIL_BINS == 'QMED') %>%
+  wilcox_test(PER_DEAD ~ Bleaching_Period)
+
+s %>%
+  filter(TAIL_BINS == 'Q80') %>%
+  wilcox_test(PER_DEAD ~ Bleaching_Period)
 
 ######################################################################
 # set colors
