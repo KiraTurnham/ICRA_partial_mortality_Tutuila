@@ -36,8 +36,8 @@ eds_MO06 <- eds_MO06 %>%
          CRW_DHW_MeanMax,
          CRW_DHW_Dur
   )
-CRW_DHW_MeanMax = DHW.MeanMax_Degree_Heating_Weeks_CRW_Daily_YR01,
-CRW_DHW_Dur = DHW.MeanDur_Major_Degree_Heating_Weeks_CRW_Daily_YR01
+#CRW_DHW_MeanMax = DHW.MeanMax_Degree_Heating_Weeks_CRW_Daily_YR01,
+#CRW_DHW_Dur = DHW.MeanDur_Major_Degree_Heating_Weeks_CRW_Daily_YR01
 
 sub_numeric <- eds_MO06 %>%
   select(where(is.numeric))
@@ -99,10 +99,10 @@ site<-merged2025_eds_PM_S_colony_6mjuly%>%
     prop_mean_PM = mean_PM / 100,
     SST_Mean = first(SST_Mean),
     SST_biweekly = first(SST_BiweekRange),
-    DHW_MeanMax_Major = first(DHW_MeanMax_Major),
-    DHW_Dur = first(DHW_Dur),
-    CRW_DHW_Dur = first(CRW_DHW_Dur),
-    CRW_DHW_MeanMax = first(CRW_DHW_MeanMax),
+    #DHW_MeanMax_Major = first(DHW_MeanMax_Major),
+    #DHW_Dur = first(DHW_Dur),
+   # CRW_DHW_Dur = first(CRW_DHW_Dur),
+  #  CRW_DHW_MeanMax = first(CRW_DHW_MeanMax),
     Latitude= first(LATITUDE),
     LONGITUDE = first(LONGITUDE),
     .groups = "drop")
