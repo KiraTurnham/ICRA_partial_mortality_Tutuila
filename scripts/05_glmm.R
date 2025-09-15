@@ -12,6 +12,7 @@ library(glmmTMB)
 library(DHARMa)
 library(performance)
 library(emmeans)
+library(ggeffects)
 
 select = dplyr::select
 rename  = dplyr::rename
@@ -188,11 +189,11 @@ glm.crw.meanmax<-glmmTMB(prop_mean_PM ~ CRW_DHW_MeanMax * TAIL_BINS,
 AIC(glm.sstmean_biweekly, glm.sstmean, glm.sstbiweekly, glm.dhwmeanmax, glm.dur, glm.crw.dur, glm.crw.meanmax)
 compare_performance(glm.sstmean_biweekly, glm.sstmean, glm.sstbiweekly, glm.dhwmeanmax, glm.dur, glm.crw.dur, glm.crw.meanmax, rank = TRUE)
 
+# 
+# AIC(glm.1, glm.1a, glm.1b)
+# compare_performance(glm.1, glm.1a, glm.1b, rank = TRUE)
 
-AIC(glm.1, glm.1a, glm.1b)
-compare_performance(glm.1, glm.1a, glm.1b, rank = TRUE)
-
-# best is just SST mean
+# best is just JPL SST mean
 model<- glmmTMB(
   prop_mean_PM ~ (SST_Mean * TAIL_BINS), #+ (SST_biweekly * TAIL_BINS),
   data = site,
@@ -205,22 +206,26 @@ performance::r2(model)
 
 
 
-#emmeans across SST_Mean by size class
+#emmeans estimated mean PM across SST for each size class
 emmeans(model, ~ SST_Mean | TAIL_BINS, at = list(SST_Mean = seq(min(site$SST_Mean), max(site$SST_Mean), length.out = 5)))
 
-#hich sizes differ
+#which sizes differ
 mean_sst <- mean(site$SST_Mean, na.rm = TRUE)
-# Estimated means at mean SST
-emms_fixedSST <- emmeans(model, ~ TAIL_BINS)
+# # Estimated means at mean SST
+# emms_fixedSST <- emmeans(model, ~ TAIL_BINS)
+# pairs(emms_fixedSST, adjust = "tukey")
 
-# Pairwise comparisons
-pairs(emms_fixedSST, adjust = "tukey")
-
-#test if slope differs by size
+#test if slope differs by size. estiamte slope of SST mean for each size class
 emtrends(model, ~ TAIL_BINS, var = "SST_Mean")
 
 pairs(emtrends(model, ~ TAIL_BINS, var = "SST_Mean"))
 
+trends<- emtrends(model, specs = "TAIL_BINS", var = "SST_Mean")
+summary(trends, infer = c(TRUE, TRUE))
+pairs(trends)
+
+# Pairwise tests of slope differences
+pairs(trends)
 
 ############################################
 #look at residuals. first simulate w DHARMa#
@@ -280,65 +285,27 @@ ggplot(site, aes(x = SST_Mean, y = prop_mean_PM, color = Size_cat)) +
     axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)
   )
 
-# predict PM
-# Create prediction sequences per size bin
-make_newdata <- function(bin_label, site_data) {
-  subset_data <- subset(site_data, TAIL_BINS == bin_label)
-  SST_seq <- seq(min(subset_data$SST_Mean), max(subset_data$SST_Mean), length.out = 100)
-  data.frame(
-    SST_Mean = SST_seq,
-    TAIL_BINS = bin_label
-  )
-}
+# predict PM using ggpredict
+site$TAIL_BINS <- factor(site$TAIL_BINS)
+model <- glmmTMB(prop_mean_PM ~ SST_Mean * TAIL_BINS, family = beta_family, data = site)
 
-newdata_small <- make_newdata("Q20", site)
-newdata_med   <- make_newdata("QMED", site)
-newdata_large <- make_newdata("Q80", site)
+preds <- ggpredict(model, terms = c("SST_Mean [all]", "TAIL_BINS"))
 
-predict_and_bind <- function(newdata, label) {
-  p <- predict(model, newdata = newdata, type = "response", se.fit = TRUE)
-  p_df <- as.data.frame(p)
-  colnames(p_df) <- c("Predicted_PM", "SE_PM")
-  newdata <- cbind(newdata, p_df)
-  newdata$Predict.lwr <- newdata$Predicted_PM - 1.96 * newdata$SE_PM
-  newdata$Predict.upr <- newdata$Predicted_PM + 1.96 * newdata$SE_PM
-  newdata$Size_cat <- label
-  return(newdata)
-}
-
-newdata_small <- predict_and_bind(newdata_small, "Small")
-newdata_med   <- predict_and_bind(newdata_med, "Medium")
-newdata_large <- predict_and_bind(newdata_large, "Large")
-
-all.newdata <- rbind(newdata_small, newdata_med, newdata_large)
-
-# # calculate percent change
-# calculate_percent_change <- function(data, size_label) {
-#   min_val <- min(data$Predicted_PM, na.rm = TRUE)
-#   max_val <- max(data$Predicted_PM, na.rm = TRUE)
-#   percent_change <- ((max_val - min_val) / min_val) * 100
-#   cat(sprintf("Percent change in predicted PM for %s colonies: %.2f%%\n", size_label, percent_change))
-# }
-# 
-# calculate_percent_change(newdata_med, "Medium")
-# calculate_percent_change(newdata_large, "Large")
-
-# Reorder size factor
-all.newdata$Size_cat <- factor(all.newdata$Size_cat, levels = c("Large", "Medium", "Small"))
-site$Size_cat <- recode(site$TAIL_BINS,
-                        "Q20" = "Small",
-                        "QMED" = "Medium",
-                        "Q80" = "Large")
-site$Size_cat <- factor(site$Size_cat, levels = c("Large", "Medium", "Small"))
-
-
-ggplot() +
-  geom_line(data = all.newdata, aes(x = SST_Mean, y = Predicted_PM, color = Size_cat), linewidth = 1) +
-  geom_ribbon(data = all.newdata, aes(x = SST_Mean, ymin = Predict.lwr, ymax = Predict.upr, fill = Size_cat), alpha = 0.1) +
-  geom_point(data = site, aes(x = SST_Mean, y = prop_mean_PM, color = Size_cat), size = 2, alpha = 0.7) +
+ggplot(preds, aes(x = x, y = predicted, color = group)) +
+  geom_line(size = 1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.1, color = NA) +
+  geom_point(data = site, aes(x = SST_Mean, y = prop_mean_PM, color = TAIL_BINS), 
+             size = 2, alpha = 0.7) +
+  scale_color_manual(values = colors) +
+  scale_fill_manual(values = colors) +
+  labs(
+    x = expression("SST mean ("*~degree*C*")"),
+    y = "Predicted partial mortality (proportion)",
+    color = "Size class",
+    fill = "Size class"
+  ) +
   theme_bw() +
   theme(
-    plot.margin = unit(c(2, 1, 1, 1), "cm"),
     legend.position = "right",
     legend.title = element_blank(),
     legend.key.size = unit(0.5, 'cm'),
@@ -346,14 +313,179 @@ ggplot() +
     text = element_text(size = 18),
     panel.grid = element_blank(),
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    strip.text = element_text(size = 14),
     axis.title = element_text(size = 14),
-    axis.text = element_text(size = 12)
-  ) +
-  ylab("Predicted partial mortality \n(proportion)") +
-  xlab(expression("SST mean ("*~degree*C*")"))+
+    axis.text = element_text(size = 12))+
+      ylab("Predicted partial mortality \n(proportion)") 
+  
+
+#to plot scaled x axis
+
+site$SST_scaled <- scale(site$SST_Mean)
+model <- glmmTMB(prop_mean_PM ~ SST_scaled * TAIL_BINS, data = site, family = beta_family)
+
+preds <- ggpredict(model, terms = c("SST_scaled [all]", "TAIL_BINS"))
+
+ggplot(preds, aes(x = x, y = predicted, color = group)) +
+  geom_line(size = 1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.1, color = NA) +
+  geom_point(data = site, aes(x = SST_scaled, y = prop_mean_PM, color = TAIL_BINS), 
+             size = 2, alpha = 0.7) +
   scale_color_manual(values = colors) +
-  scale_fill_manual(values = colors)
-#ggsave("plots/SST_mean_regression.png", plot = p, width = 8, height = 6, dpi = 300)
-#ggsave("plots/SST_mean_regression.pdf", plot = p, width = 8, height = 6, dpi = 300)
-#ggsave("plots/SST_mean_regression.png")
+  scale_fill_manual(values = colors) +
+  labs(
+    x = expression("SST mean ("*~degree*C*")"),
+    y = "Predicted partial mortality (proportion)",
+    color = "Size class",
+    fill = "Size class"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "right",
+    legend.title = element_blank(),
+    legend.key.size = unit(0.5, 'cm'),
+    legend.text = element_text(size = 14),
+    text = element_text(size = 18),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12))+
+  ylab("Predicted partial mortality \n(proportion)")+
+  xlab("Scaled SST Mean")
+)
+
+#run 2 category model:
+#= smalls vs all (>12 cm), pooling med/large colonies
+#adjust 0s fo beta regression before averaging, then take mean PM, convert to proportion.
+
+colnames(merged2025_eds_PM_S_colony1yr_sep)
+n <- nrow(merged2025_eds_PM_S_colony1yr_sep)
+
+merged2025_eds_PM_S_colony1yr_sep<-merged2025_eds_PM_S_colony1yr_sep%>%
+  mutate(size_cat = case_when(
+    TAIL_BINS == "Q20" ~ "Q20",
+    TAIL_BINS %in% c("Q80", "QMED") ~ "big"
+  ))
+
+site<-merged2025_eds_PM_S_colony1yr_sep%>%
+  mutate(
+    PER_DEAD_TRUE = (PER_DEAD * (n - 1) + 0.5) / n)%>%                       
+  group_by(SITE, size_cat)%>%
+  summarise(
+    n = n(),
+    mean_PM = mean(PER_DEAD_TRUE, na.rm = TRUE),
+    prop_mean_PM = mean_PM / 100,
+    SST_Mean = first(SST_Mean),
+    SST_biweekly = first(SST_biweekly),
+    DHW_MeanMax_Major = first(DHW_MeanMax),
+    DHW_Dur = first(DHW_Dur),
+    CRW_DHW_Dur = first(CRW_DHW_Dur),
+    CRW_DHW_MeanMax = first(CRW_DHW_MeanMax),
+    Latitude= first(LATITUDE),
+    LONGITUDE = first(LONGITUDE),
+    .groups = "drop")
+
+#histogram
+hist(site$prop_mean_PM, breaks = 30)
+
+## check which model is best
+glm.sstmean_biweekly <- glmmTMB(prop_mean_PM ~ SST_Mean * size_cat + SST_biweekly * size_cat,
+                                data = site,
+                                family = beta_family()
+)
+
+glm.sstmean <- glmmTMB(prop_mean_PM ~ SST_Mean * size_cat,
+                       data = site,
+                       family = beta_family()
+)
+
+glm.sstbiweekly<-glmmTMB(prop_mean_PM ~ SST_biweekly * size_cat,
+                         data = site,
+                         family = beta_family()
+)
+
+glm.dhwmeanmax<-glmmTMB(prop_mean_PM ~ DHW_MeanMax_Major * size_cat,
+                        data = site,
+                        family = beta_family()
+)
+
+glm.dur<-glmmTMB(prop_mean_PM ~ DHW_Dur * size_cat,
+                 data = site,
+                 family = beta_family()
+)
+glm.crw.dur<-glmmTMB(prop_mean_PM ~ CRW_DHW_Dur * size_cat,
+                     data = site,
+                     family = beta_family()
+)
+glm.crw.meanmax<-glmmTMB(prop_mean_PM ~ CRW_DHW_MeanMax * size_cat,
+                         data = site,
+                         family = beta_family()
+)
+
+
+AIC(glm.sstmean_biweekly, glm.sstmean, glm.sstbiweekly, glm.dhwmeanmax, glm.dur, glm.crw.dur, glm.crw.meanmax)
+compare_performance(glm.sstmean_biweekly, glm.sstmean, glm.sstbiweekly, glm.dhwmeanmax, glm.dur, glm.crw.dur, glm.crw.meanmax, rank = TRUE)
+
+# best is just JPL SST mean
+model<- glmmTMB(
+  prop_mean_PM ~ (SST_Mean * size_cat), #+ (SST_biweekly * TAIL_BINS),
+  data = site,
+  family = beta_family()
+)
+summary(model)
+
+#Ferrari's R2
+performance::r2(model)
+
+
+
+#emmeans estimated mean PM across SST for each size class
+emmeans(model, ~ SST_Mean | size_cat, at = list(SST_Mean = seq(min(site$SST_Mean), max(site$SST_Mean), length.out = 5)))
+
+#which sizes differ
+mean_sst <- mean(site$SST_Mean, na.rm = TRUE)
+# # Estimated means at mean SST
+# emms_fixedSST <- emmeans(model, ~ TAIL_BINS)
+# pairs(emms_fixedSST, adjust = "tukey")
+
+#test if slope differs by size. estiamte slope of SST mean for each size class
+emtrends(model, ~ size_cat, var = "SST_Mean")
+
+pairs(emtrends(model, ~ size_cat, var = "SST_Mean"))
+
+trends<- emtrends(model, specs = "size_cat", var = "SST_Mean")
+summary(trends, infer = c(TRUE, TRUE))
+pairs(trends)
+
+# predict PM using ggpredict
+site$size_cat <- factor(site$size_cat)
+model <- glmmTMB(prop_mean_PM ~ SST_Mean * size_cat, family = beta_family, data = site)
+
+preds <- ggpredict(model, terms = c("SST_Mean [all]", "size_cat"))
+
+ggplot(preds, aes(x = x, y = predicted, color = group)) +
+  geom_line(size = 1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.1, color = NA) +
+  geom_point(data = site, aes(x = SST_Mean, y = prop_mean_PM, color = size_cat), 
+             size = 2, alpha = 0.7) +
+  scale_color_manual(values = colors) +
+  scale_fill_manual(values = colors) +
+  labs(
+    x = expression("SST mean ("*~degree*C*")"),
+    y = "Predicted partial mortality (proportion)",
+    color = "Size class",
+    fill = "Size class"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "right",
+    legend.title = element_blank(),
+    legend.key.size = unit(0.5, 'cm'),
+    legend.text = element_text(size = 14),
+    text = element_text(size = 18),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12))+
+  ylab("Predicted partial mortality \n(proportion)") 
+)
+
