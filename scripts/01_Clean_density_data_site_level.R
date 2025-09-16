@@ -74,7 +74,7 @@ ALL_COLONY_DENSITY<- SITE_COUNT %>%
   ungroup()
 
 save(ALL_COLONY_DENSITY, file="data/ALL_COLONY_DENSITY.RData")
-save(ALL_COLONY_DENSITY, file="data/ALL_COLONY_DENSITY.csv")
+save(ALL_COLONY_DENSITY, file="outputs/ALL_COLONY_DENSITY.csv")
 
 #subset these data to only include data points from South side of Tutuila to remove surveying bias (ICRA is rare on north side)
 #this was done by importing this data into ArcGIS and selectign points manually. See map script for visualization.
@@ -98,4 +98,4 @@ SOUTH_COLONY_DENSITY_filtered<- SOUTH_COLONY_DENSITY %>%
 
 #Use adjusted_density in future analyses:
 save(SOUTH_COLONY_DENSITY_filtered, file="data/SOUTH_COLONY_DENSITY_filtered.RData")
-write.csv(SOUTH_COLONY_DENSITY_filtered, file="data/SOUTH_COLONY_DENSITY_filtered.csv")
+write.csv(SOUTH_COLONY_DENSITY_filtered, file="outputs/SOUTH_COLONY_DENSITY_filtered.csv")

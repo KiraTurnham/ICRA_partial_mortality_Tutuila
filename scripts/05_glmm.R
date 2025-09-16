@@ -120,8 +120,6 @@ range(sub_eds$CRW_DHW_MeanMax)
 merged2025_eds_PM_S_colony1yr_sep<-sub_eds%>%
   left_join(SOUTH_COLONY_SIZE_PM, by = "SITE")%>%
   filter(!is.na(PER_DEAD))
-# write.csv(merged2025_eds_PM_S_colony1yr_DHW_sep, file ="merged2025_eds_PM_S_colony1yr_JPLDHW_Sep.csv") 
-# save(merged2025_eds_PM_S_colony1yr_DHW_sep, file="paper/merged2025_eds_PM_S_colony1yr_JPLDHW_Sep.Rdata")
 
 #################################################################################################################
 #adjust 0s fo beta regression before averaging, then take mean PM, convert to proportion.

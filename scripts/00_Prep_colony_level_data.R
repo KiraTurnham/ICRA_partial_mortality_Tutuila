@@ -122,4 +122,4 @@ ICRA_SIZE_PM_SOUTH_filtered <- SOUTH_COLONY_SIZE_PM %>%
 
 #save as csv and rdata. Use in temporal analyses 
 save(ICRA_SIZE_PM_SOUTH_filtered, file ="data/ICRA_SIZE_PM_SOUTH_sizefiltered_colony_level.RData") #remember this has subset of 2025 data that were sized
-write.csv(ICRA_SIZE_PM_SOUTH_filtered, "data/south_ICRA_Colony_level_data_sizefiltered.csv", row.names = FALSE)
+write.csv(ICRA_SIZE_PM_SOUTH_filtered, "outputs/south_ICRA_Colony_level_data_sizefiltered.csv", row.names = FALSE)
