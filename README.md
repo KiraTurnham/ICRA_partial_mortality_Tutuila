@@ -28,8 +28,8 @@ Run the numbered scripts in order:
 3. `scripts/02_colony_level_PM_size_summary.R` summarizes and visualizes colony partial mortality by year and size class.
 4. `scripts/03_density_summary.R` summarizes and visualizes site-level density.
 5. `scripts/04_site_map.R` creates maps of survey sites and density.
-6. `scripts/05_glmm.R` analyzes the relationship between partial mortality and heat-stress measures.
-7. `scripts/06_glmm_6m_supplement.R` runs the supplementary six-month heat-stress analysis.
+6. `scripts/05_glmm.R` analyzes the relationship between partial mortality and 1year prior satellite-derived SST.
+7. `scripts/06_glmm_6m_supplement.R` runs the supplementary six-month prior satellite-derived SST analysis.
 
 For example, from the repository root in a terminal:
 
