@@ -8,7 +8,7 @@ This repository contains the data, R scripts, and selected outputs supporting:
 
 The study analyzes *I. crateriformis* colony density and partial mortality around Tutuila, American Samoa, using surveys from 2015–2025. It compares surveys before the 2024 Global Coral Bleaching Event (GCBE) with 2025 observations and evaluates whether heat stress and colony size are associated with partial mortality.
 
-The study found that mean partial mortality was 30% in 2025, compared with 8% in previous survey years. Changes were concentrated in medium and large colonies, while small colonies remained relatively unchanged. Partial mortality in medium and large colonies also increased with mean sea surface temperature, consistent with an impact of the 2024 GCBE. These findings support partial mortality as a way to assess bleaching impacts when surveys cannot be conducted during a heat-stress event, and indicate that spatial differences in heat stress may contribute to local refuges.
+We found that mean partial mortality was 30% in 2025, compared with 8% in previous survey years. Changes were concentrated in medium and large colonies, while small colonies remained relatively unchanged. Partial mortality in medium and large colonies also increased with mean sea surface temperature experienced the year prior, consistent with timing of the 2024 GCBE. These findings support partial mortality as a way to assess bleaching impacts when surveys cannot be conducted during a heat-stress event.
 
 ## Prerequisites
 
